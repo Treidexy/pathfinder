@@ -3,9 +3,9 @@ pub const TileMap = std.AutoHashMap(Square, i32);
 pub const Area = std.bit_set.ArrayBitSet(usize, size);
 
 pub var allocator: std.mem.Allocator = undefined;
-pub const width: i32 = 18;
-pub const height: i32 = 32;
-pub const size = width * height;
+pub const width: usize = 18;
+pub const height: usize = 32;
+pub const size: usize = width * height;
 
 pub const Board = struct {
     tiles: TileMap,
@@ -23,18 +23,18 @@ pub const Board = struct {
     }
 };
 
-pub const Square = i32;
+pub const Square = usize;
 
 pub const Sector = struct {
     area: Area,
-    mag: i32,
+    mag: isize,
 };
 
 pub fn adjacent(self: Square, board: Board) !Area {
     var area = Area.initEmpty();
 
-    for (-1..2) |dy| {
-        for (-1..2) |dx| {
+    for (-1..1) |dy| {
+        for (-1..1) |dx| {
             const x = self % board.width + dx;
             const y = self / board.width + dy;
 
