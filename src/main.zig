@@ -26,7 +26,7 @@ pub fn main() !void {
     try stdout.print("Hello, world!", .{});
     defer stdout.print("Goodbye, world!", .{}) catch {};
 
-    var board = pf.Board.init();
+    var position = pf.Position.init();
 
     rl.initWindow(thicc * pf.width, thicc * pf.height, "Heigh Heogh!");
     defer rl.closeWindow();
@@ -40,33 +40,33 @@ pub fn main() !void {
 
         if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
             if (rl.isKeyDown(rl.KeyboardKey.key_left_control)) {
-                if (!board.safes.isSet(mouse))
-                    board.flags.toggle(mouse);
+                if (!position.safes.isSet(mouse))
+                    position.flags.toggle(mouse);
             } else {
-                if (!board.flags.isSet(mouse)) {
-                    if (!board.safes.isSet(mouse)) {
+                if (!position.flags.isSet(mouse)) {
+                    if (!position.safes.isSet(mouse)) {
                         if (rl.isKeyDown(rl.KeyboardKey.key_one)) {
-                            try board.tiles.put(mouse, 1);
+                            try position.tiles.put(mouse, 1);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_two)) {
-                            try board.tiles.put(mouse, 2);
+                            try position.tiles.put(mouse, 2);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_three)) {
-                            try board.tiles.put(mouse, 3);
+                            try position.tiles.put(mouse, 3);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_four)) {
-                            try board.tiles.put(mouse, 4);
+                            try position.tiles.put(mouse, 4);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_five)) {
-                            try board.tiles.put(mouse, 5);
+                            try position.tiles.put(mouse, 5);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_six)) {
-                            try board.tiles.put(mouse, 6);
+                            try position.tiles.put(mouse, 6);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_seven)) {
-                            try board.tiles.put(mouse, 7);
+                            try position.tiles.put(mouse, 7);
                         } else if (rl.isKeyDown(rl.KeyboardKey.key_eight)) {
-                            try board.tiles.put(mouse, 8);
+                            try position.tiles.put(mouse, 8);
                         }
 
-                        board.safes.set(mouse);
+                        position.safes.set(mouse);
                     } else {
-                        _ = board.tiles.remove(mouse);
-                        board.safes.unset(mouse);
+                        _ = position.tiles.remove(mouse);
+                        position.safes.unset(mouse);
                     }
                 }
             }
@@ -78,10 +78,10 @@ pub fn main() !void {
         rl.clearBackground(rl.Color.init(64, 64, 64, 255));
 
         drawArea(pf.Area.initFull(), Colors.unknown.len, Colors.unknown, 0);
-        drawArea(board.safes, Colors.safe.len, Colors.safe, 0);
-        drawArea(board.flags, 1, .{Colors.flag}, 8);
+        drawArea(position.safes, Colors.safe.len, Colors.safe, 0);
+        drawArea(position.flags, 1, .{Colors.flag}, 8);
 
-        var it = board.tiles.iterator();
+        var it = position.tiles.iterator();
         while (it.next()) |entry| {
             const x = entry.key_ptr.* % width;
             const y = entry.key_ptr.* / width;
