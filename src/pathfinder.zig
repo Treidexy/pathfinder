@@ -1,5 +1,5 @@
 const std = @import("std");
-pub const TileMap = std.AutoHashMap(Square, i32);
+pub const TileMap = std.AutoHashMap(Square, usize);
 pub const Area = std.bit_set.ArrayBitSet(usize, size);
 
 pub const allocator: std.mem.Allocator = std.heap.c_allocator;
@@ -49,9 +49,9 @@ pub const Board = struct {
         var it = self.position.tiles.iterator();
         while (it.next()) |tile| {
             const adj = SquareExt.adjacent(tile.key_ptr.*);
-            var sector = .{
+            var sector = Sector{
                 .area = adj.differenceWith(self.position.safes).differenceWith(self.position.flags),
-                .mag = tile.value_ptr.*,
+                .mag = @intCast(tile.value_ptr.*),
             };
 
             sector.mag -= @intCast(adj.intersectWith(self.position.flags).count());

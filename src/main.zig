@@ -1,11 +1,13 @@
 const std = @import("std");
 const rl = @import("raylib");
 const pf = @import("pathfinder.zig");
+const ms = @import("minesweeper.zig");
 
 const width = pf.width;
 const height = pf.height;
 const size = pf.size;
 const thicc: @TypeOf(size) = 30;
+const mine_count = ms.mine_count;
 
 const Colors = .{
     .unknown = [_]rl.Color{
@@ -33,8 +35,67 @@ pub fn main() !void {
     try stdout.print("Hello, world!", .{});
     defer stdout.print("Goodbye, world!", .{}) catch {};
 
-    var position = pf.Position.init();
+    try runGame();
+    // try runEditor();
+}
 
+fn runGame() !void {
+    var position = pf.Position.init();
+    var game: ms.Game = undefined;
+    var board: pf.Board = pf.Board.init(position);
+
+    rl.initWindow(thicc * pf.width, thicc * pf.height, "Heigh Heogh!");
+    defer rl.closeWindow();
+
+    rl.setTargetFPS(60);
+
+    while (!rl.windowShouldClose()) {
+        const mx = @as(usize, @intCast(rl.getMouseX())) / thicc;
+        const my = @as(usize, @intCast(rl.getMouseY())) / thicc;
+        const mouse = mx + my * width;
+
+        if (rl.isKeyPressed(rl.KeyboardKey.key_tab)) {
+            try board.clarify();
+        }
+
+        if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
+            if (position.safes.count() == 0) {
+                game = try ms.Game.init(mouse, mine_count);
+                position.safes.set(mouse);
+            } else if (rl.isKeyDown(rl.KeyboardKey.key_left_control)) {
+                position.safes.set(mouse);
+            } else {
+                position.flags.toggle(mouse);
+            }
+
+            position = try game.getPosition(position.safes);
+            board = pf.Board.init(position);
+        }
+
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(rl.Color.init(64, 64, 64, 255));
+
+        drawArea(pf.Area.initFull(), Colors.unknown.len, Colors.unknown, 0);
+        drawArea(position.safes, Colors.safe.len, Colors.safe, 0);
+        drawArea(position.flags, 1, .{Colors.flag}, 8);
+
+        var it = position.tiles.iterator();
+        while (it.next()) |entry| {
+            const x = entry.key_ptr.* % width;
+            const y = entry.key_ptr.* / width;
+
+            rl.drawText(&[2:0]u8{ @as(u8, @intCast(entry.value_ptr.*)) + '0', 0 }, @intCast(x * thicc + 3), @intCast(y * thicc + 2), 28, rl.Color.black);
+        }
+
+        drawArea(board.position.safes.differenceWith(position.safes), Colors.engine_safe.len, Colors.engine_safe, 0);
+        drawArea(board.position.flags.differenceWith(position.flags), Colors.engine_flag.len, Colors.engine_flag, 0);
+    }
+}
+
+fn runEditor() !void {
+    var position = pf.Position.init();
     var board = pf.Board.init(position);
 
     rl.initWindow(thicc * pf.width, thicc * pf.height, "Heigh Heogh!");
