@@ -14,6 +14,8 @@ pub const Game = struct {
         var mines = pf.SquareExt.adjacent(safe);
         mines.set(safe);
 
+        const haven = pf.Area.initEmpty().unionWith(mines);
+
         const now = try std.time.Instant.now();
         var rng1 = std.Random.DefaultPrng.init(now.timestamp);
         var rng = rng1.random();
@@ -28,21 +30,22 @@ pub const Game = struct {
             }
         }
 
+        mines.setIntersection(haven.complement());
+
         return .{ .mines = mines };
     }
 
-    pub fn getPosition(self: Game, safes: pf.Area) !pf.Position {
-        var position = pf.Position.init();
+    pub fn verifyPosition(self: Game, position: *pf.Position) !void {
+        var marked = position.safes;
+        position.safes = pf.Area.initEmpty();
 
-        var it = safes.iterator(.{});
+        var it = marked.iterator(.{});
         while (it.next()) |i| {
-            try self.mark(&position, i);
+            try self.mark(position, i);
         }
-
-        return position;
     }
 
-    fn mark(self: Game, position: *pf.Position, square: pf.Square) !void {
+    pub fn mark(self: Game, position: *pf.Position, square: pf.Square) !void {
         if (position.safes.isSet(square)) return;
         if (self.mines.isSet(square)) {
             return GameError.MineFound;

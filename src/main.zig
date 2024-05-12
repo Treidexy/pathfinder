@@ -27,15 +27,17 @@ const Colors = .{
         rl.Color.init(0, 0, 255, 128),
     },
 
-    .flag = rl.Color.init(242, 54, 7, 255),
+    .flag = [_]rl.Color{
+        rl.Color.init(242, 54, 7, 255),
+    },
 };
 
 pub fn main() !void {
     const stdout = std.io.getStdOut().writer();
-    try stdout.print("Hello, world!", .{});
-    defer stdout.print("Goodbye, world!", .{}) catch {};
+    try stdout.print("Hello, world!\n", .{});
+    defer stdout.print("Goodbye, world!\n", .{}) catch {};
 
-    try runGame();
+    runGame();
     // try runEditor();
 }
 
@@ -54,21 +56,42 @@ fn runGame() !void {
         const my = @as(usize, @intCast(rl.getMouseY())) / thicc;
         const mouse = mx + my * width;
 
-        if (rl.isKeyPressed(rl.KeyboardKey.key_tab)) {
+        if (rl.isKeyDown(rl.KeyboardKey.key_tab)) {
             try board.clarify();
         }
 
-        if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
-            if (position.safes.count() == 0) {
+        if (rl.isKeyPressed(rl.KeyboardKey.key_enter)) {
+            position = try board.position.clone();
+            try game.verifyPosition(&position);
+            board = pf.Board.init(position);
+        }
+
+        const left_pressed = rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left);
+        const right_pressed = rl.isMouseButtonPressed(rl.MouseButton.mouse_button_right);
+        if (left_pressed or right_pressed) {
+            if (left_pressed and position.safes.count() == 0) {
                 game = try ms.Game.init(mouse, mine_count);
-                position.safes.set(mouse);
-            } else if (rl.isKeyDown(rl.KeyboardKey.key_left_control)) {
-                position.safes.set(mouse);
-            } else {
-                position.flags.toggle(mouse);
+                try game.mark(&position, mouse);
+            } else if (right_pressed or rl.isKeyDown(rl.KeyboardKey.key_left_control)) {
+                if (!position.flags.isSet(mouse)) {
+                    try game.mark(&position, mouse);
+                }
+            } else if (left_pressed) {
+                if (!position.safes.isSet(mouse)) {
+                    position.flags.toggle(mouse);
+                } else {
+                    const adj = pf.SquareExt.adjacent(mouse).differenceWith(position.safes);
+                    const mag = position.tiles.get(mouse) orelse 0;
+                    if (adj.intersectWith(position.flags).count() == mag) {
+                        var it = adj.differenceWith(position.flags).iterator(.{});
+                        while (it.next()) |i| {
+                            try game.mark(&position, i);
+                        }
+                    }
+                }
             }
 
-            position = try game.getPosition(position.safes);
+            try game.verifyPosition(&position);
             board = pf.Board.init(position);
         }
 
@@ -79,7 +102,7 @@ fn runGame() !void {
 
         drawArea(pf.Area.initFull(), Colors.unknown.len, Colors.unknown, 0);
         drawArea(position.safes, Colors.safe.len, Colors.safe, 0);
-        drawArea(position.flags, 1, .{Colors.flag}, 8);
+        drawArea(position.flags, Colors.flag.len, Colors.flag, 8);
 
         var it = position.tiles.iterator();
         while (it.next()) |entry| {
@@ -160,7 +183,7 @@ fn runEditor() !void {
 
         drawArea(pf.Area.initFull(), Colors.unknown.len, Colors.unknown, 0);
         drawArea(position.safes, Colors.safe.len, Colors.safe, 0);
-        drawArea(position.flags, 1, .{Colors.flag}, 8);
+        drawArea(position.flags, Colors.flag.len, Colors.flag, 8);
 
         var it = position.tiles.iterator();
         while (it.next()) |entry| {
