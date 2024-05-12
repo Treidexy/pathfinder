@@ -20,9 +20,9 @@ pub const Position = struct {
         };
     }
 
-    pub fn clone(self: Position) Position {
+    pub fn clone(self: Position) !Position {
         return .{
-            .tiles = self.tiles.clone(),
+            .tiles = try self.tiles.clone(),
             .safes = Area.initEmpty().unionWith(self.safes),
             .flags = Area.initEmpty().unionWith(self.flags),
         };
@@ -42,30 +42,46 @@ pub const Board = struct {
         };
     }
 
-    pub fn compute(self: Board) void {
+    pub fn compute(self: *Board) !void {
         // lol what's optimization?
         self.sectors.clearAndFree();
 
         var it = self.position.tiles.iterator();
         while (it.next()) |tile| {
+            const adj = SquareExt.adjacent(tile.key_ptr.*);
             var sector = .{
-                .area = SquareExt.adjacent(tile.key_ptr, self.position).differenceWith(self.position.safes).differenceWith(self.position.flags),
+                .area = adj.differenceWith(self.position.safes).differenceWith(self.position.flags),
                 .mag = tile.value_ptr.*,
             };
 
-            sector.mag -= sector.area.unionWith(self.position.flags);
+            sector.mag -= @intCast(adj.intersectWith(self.position.flags).count());
 
-            self.sectors.append(sector);
+            try self.sectors.append(sector);
         }
     }
 
-    pub fn clarify(self: Board) void {
-        self.compute();
+    pub fn clarify(self: *Board) !void {
+        try self.compute();
 
-        for (self.sectors) |a| {
-            for (self.sectors) |b| {
-                if (a == b) {
-                    continue;
+        for (self.sectors.items) |a| {
+            if (a.mag == 0) {
+                self.position.safes.setUnion(a.area);
+                continue;
+            }
+
+            if (a.mag == a.area.count()) {
+                self.position.flags.setUnion(a.area);
+                continue;
+            }
+
+            for (self.sectors.items) |b| {
+                if (a.mag < b.mag) continue;
+                if (a.area.eql(b.area)) continue;
+                if (a.area.intersectWith(b.area).count() == 0) continue;
+
+                if (a.mag - b.mag == a.area.differenceWith(b.area).count()) {
+                    self.position.flags.setUnion(a.area.differenceWith(b.area));
+                    self.position.safes.setUnion(b.area.differenceWith(a.area));
                 }
             }
         }
@@ -80,23 +96,19 @@ pub const Sector = struct {
 };
 
 pub const SquareExt = struct {
-    pub fn adjacent(self: Square, position: Position) Area {
+    pub fn adjacent(self: Square) Area {
         var area = Area.initEmpty();
 
-        for (-1..1) |dy| {
-            for (-1..1) |dx| {
-                if (dx == 0 and dy == 0) {
-                    continue;
-                }
+        for ([_]isize{ -1, 0, 1 }) |dy| {
+            for ([_]isize{ -1, 0, 1 }) |dx| {
+                if (dx == 0 and dy == 0) continue;
 
-                const x = self % position.width + dx;
-                const y = self / position.width + dy;
+                const x = @as(isize, @intCast(self % width)) + dx;
+                const y = @as(isize, @intCast(self / width)) + dy;
 
-                if (x < 0 or x >= position.width or y < 0 or y >= position.height) {
-                    continue;
-                }
+                if (x < 0 or x >= width or y < 0 or y >= height) continue;
 
-                area.set(x + y * position.width);
+                area.set(@intCast(x + y * width));
             }
         }
 

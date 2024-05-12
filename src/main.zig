@@ -18,6 +18,13 @@ const Colors = .{
         rl.Color.init(215, 184, 153, 255),
     },
 
+    .engine_flag = [_]rl.Color{
+        rl.Color.init(255, 0, 0, 128),
+    },
+    .engine_safe = [_]rl.Color{
+        rl.Color.init(0, 0, 255, 128),
+    },
+
     .flag = rl.Color.init(242, 54, 7, 255),
 };
 
@@ -27,6 +34,8 @@ pub fn main() !void {
     defer stdout.print("Goodbye, world!", .{}) catch {};
 
     var position = pf.Position.init();
+
+    var board = pf.Board.init(position);
 
     rl.initWindow(thicc * pf.width, thicc * pf.height, "Heigh Heogh!");
     defer rl.closeWindow();
@@ -38,38 +47,49 @@ pub fn main() !void {
         const my = @as(usize, @intCast(rl.getMouseY())) / thicc;
         const mouse = mx + my * width;
 
+        if (rl.isKeyPressed(rl.KeyboardKey.key_tab)) {
+            try board.clarify();
+        }
+
         if (rl.isMouseButtonPressed(rl.MouseButton.mouse_button_left)) {
             if (rl.isKeyDown(rl.KeyboardKey.key_left_control)) {
                 if (!position.safes.isSet(mouse))
                     position.flags.toggle(mouse);
             } else {
                 if (!position.flags.isSet(mouse)) {
-                    if (!position.safes.isSet(mouse)) {
-                        if (rl.isKeyDown(rl.KeyboardKey.key_one)) {
-                            try position.tiles.put(mouse, 1);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_two)) {
-                            try position.tiles.put(mouse, 2);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_three)) {
-                            try position.tiles.put(mouse, 3);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_four)) {
-                            try position.tiles.put(mouse, 4);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_five)) {
-                            try position.tiles.put(mouse, 5);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_six)) {
-                            try position.tiles.put(mouse, 6);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_seven)) {
-                            try position.tiles.put(mouse, 7);
-                        } else if (rl.isKeyDown(rl.KeyboardKey.key_eight)) {
-                            try position.tiles.put(mouse, 8);
-                        }
+                    position.safes.toggle(mouse);
 
+                    if (rl.isKeyDown(rl.KeyboardKey.key_one)) {
+                        try position.tiles.put(mouse, 1);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_two)) {
+                        try position.tiles.put(mouse, 2);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_three)) {
+                        try position.tiles.put(mouse, 3);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_four)) {
+                        try position.tiles.put(mouse, 4);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_five)) {
+                        try position.tiles.put(mouse, 5);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_six)) {
+                        try position.tiles.put(mouse, 6);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_seven)) {
+                        try position.tiles.put(mouse, 7);
+                        position.safes.set(mouse);
+                    } else if (rl.isKeyDown(rl.KeyboardKey.key_eight)) {
+                        try position.tiles.put(mouse, 8);
                         position.safes.set(mouse);
                     } else {
                         _ = position.tiles.remove(mouse);
-                        position.safes.unset(mouse);
                     }
                 }
             }
+
+            board = pf.Board.init(position);
         }
 
         rl.beginDrawing();
@@ -88,6 +108,9 @@ pub fn main() !void {
 
             rl.drawText(&[2:0]u8{ @as(u8, @intCast(entry.value_ptr.*)) + '0', 0 }, @intCast(x * thicc + 3), @intCast(y * thicc + 2), 28, rl.Color.black);
         }
+
+        drawArea(board.position.safes.differenceWith(position.safes), Colors.engine_safe.len, Colors.engine_safe, 0);
+        drawArea(board.position.flags.differenceWith(position.flags), Colors.engine_flag.len, Colors.engine_flag, 0);
     }
 }
 
